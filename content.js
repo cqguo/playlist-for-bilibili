@@ -7,6 +7,8 @@
   let positionFrame = 0;
   let pageObserver = null;
   let resizeObserver = null;
+  let boundVideo = null;
+  const PLAY_MODES = new Set(["sequence", "loop", "single", "shuffle"]);
 
   function decodePlaylist(value) {
     if (!value) return [];
@@ -24,6 +26,10 @@
         .slice(0, MAX_ITEMS)
         .map((item) => ({
           bvid: item.bvid,
+          page:
+            Number.isInteger(Number(item.page)) && Number(item.page) > 0
+              ? Number(item.page)
+              : undefined,
           title: String(item.title || item.bvid).slice(0, 120)
         }));
     } catch {
@@ -39,14 +45,20 @@
     if (!items.length) return null;
 
     const currentBvid = location.pathname.match(/\/video\/(BV[\w]+)/i)?.[1];
+    const currentPage = Number(new URL(location.href).searchParams.get("p") || 1);
     const matchedIndex = items.findIndex(
-      (item) => item.bvid.toLowerCase() === currentBvid?.toLowerCase()
+      (item) =>
+        item.bvid.toLowerCase() === currentBvid?.toLowerCase() &&
+        (item.page || 1) === currentPage
     );
 
     return {
       name: params.get("playlist_name") || "我的播放列表",
       items,
       index: matchedIndex >= 0 ? matchedIndex : 0,
+      mode: PLAY_MODES.has(params.get("play_mode"))
+        ? params.get("play_mode")
+        : "loop",
       params
     };
   }
@@ -54,7 +66,9 @@
   function buildUrl(state, index) {
     const params = new URLSearchParams(state.params);
     params.set("index", String(index));
-    return `https://www.bilibili.com/video/${state.items[index].bvid}/#${params.toString()}`;
+    const item = state.items[index];
+    const query = item.page ? `?p=${item.page}` : "";
+    return `https://www.bilibili.com/video/${item.bvid}/${query}#${params.toString()}`;
   }
 
   function setNativeListsHidden(hidden) {
@@ -120,11 +134,16 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
         min-height: 66px;
         padding: 13px 15px;
         background: #fff;
         border-bottom: 1px solid #e3e5e7;
       }
+      .heading { min-width: 0; }
       h2 {
         margin: 0 0 4px;
         overflow: hidden;
@@ -138,6 +157,19 @@
         color: #9499a0;
         font-size: 12px;
       }
+      select {
+        flex: 0 0 auto;
+        height: 30px;
+        padding: 0 8px;
+        color: #61666d;
+        font-size: 12px;
+        background: #f6f7f8;
+        border: 1px solid #e3e5e7;
+        border-radius: 6px;
+        cursor: pointer;
+        outline: none;
+      }
+      select:hover, select:focus { border-color: #00aeec; }
       .list {
         max-height: 360px;
         padding: 6px;
@@ -205,11 +237,40 @@
     panel.className = "panel";
 
     const header = document.createElement("header");
+    const heading = document.createElement("div");
+    heading.className = "heading";
     const title = document.createElement("h2");
     title.textContent = state.name;
     const count = document.createElement("p");
     count.textContent = `${state.index + 1} / ${state.items.length} 个视频`;
-    header.append(title, count);
+    heading.append(title, count);
+
+    const modeSelect = document.createElement("select");
+    modeSelect.setAttribute("aria-label", "播放模式");
+    const modes = [
+      ["sequence", "顺序播放"],
+      ["loop", "列表循环"],
+      ["single", "单曲循环"],
+      ["shuffle", "随机播放"]
+    ];
+    for (const [value, label] of modes) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === state.mode;
+      modeSelect.append(option);
+    }
+    modeSelect.addEventListener("change", () => {
+      const params = new URLSearchParams(location.hash.slice(1));
+      params.set("play_mode", modeSelect.value);
+      history.replaceState(
+        null,
+        "",
+        `${location.pathname}${location.search}#${params.toString()}`
+      );
+    });
+
+    header.append(heading, modeSelect);
 
     const list = document.createElement("div");
     list.className = "list";
@@ -238,6 +299,41 @@
 
     panel.append(header, list);
     shadow.append(panel);
+  }
+
+  function getNextIndex(state) {
+    if (state.mode === "single") return state.index;
+    if (state.mode === "sequence") {
+      return state.index < state.items.length - 1 ? state.index + 1 : null;
+    }
+    if (state.mode === "shuffle") {
+      if (state.items.length <= 1) return state.index;
+      let next = state.index;
+      while (next === state.index) {
+        next = Math.floor(Math.random() * state.items.length);
+      }
+      return next;
+    }
+    return (state.index + 1) % state.items.length;
+  }
+
+  function attachPlayerListener() {
+    const video = document.querySelector("video");
+    if (!video || video === boundVideo) return;
+
+    boundVideo = video;
+    video.addEventListener(
+      "ended",
+      (event) => {
+        event.stopImmediatePropagation();
+        const state = getState();
+        if (!state) return;
+        const nextIndex = getNextIndex(state);
+        if (nextIndex === null) return;
+        location.assign(buildUrl(state, nextIndex));
+      },
+      { capture: true }
+    );
   }
 
   function positionHost() {
@@ -272,6 +368,94 @@
     positionFrame = requestAnimationFrame(positionHost);
   }
 
+  function cleanNativeTitle(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .replace(/^\s*(?:正在播放|播放中)\s*/i, "")
+      .trim()
+      .slice(0, 120);
+  }
+
+  function titleFromListItem(item) {
+    if (!item) return "";
+
+    const titleElement = item.matches?.(
+      ".title-txt, .video-episode-card__info-title, .part"
+    )
+      ? item
+      : item.querySelector?.(
+          ".title-txt, .video-episode-card__info-title, .part, [class~='title']"
+        );
+    const elementTitle = cleanNativeTitle(
+      titleElement?.getAttribute("title") ||
+        titleElement?.getAttribute("aria-label") ||
+        titleElement?.textContent
+    );
+    if (elementTitle) return elementTitle;
+
+    return cleanNativeTitle(
+      item.getAttribute?.("title") || item.getAttribute?.("aria-label")
+    );
+  }
+
+  function getNativeListItemTitle() {
+    const containers = [
+      ...document.querySelectorAll(
+        ".video-pod, .playlist-container, .video-sections-content-list, " +
+          ".base-video-sections-v1, #multi_page"
+      )
+    ];
+    if (!containers.length) return "";
+
+    const activeSelectors = [
+      ".video-pod__item.active",
+      ".simple-base-item.active",
+      ".video-episode-card__info-playing",
+      ".video-episode-card.active",
+      ".cur-list .part.on",
+      ".cur-list .part.active",
+      "li.on",
+      "[aria-current='true']"
+    ];
+    for (const container of containers) {
+      for (const selector of activeSelectors) {
+        const title = titleFromListItem(container.querySelector(selector));
+        if (title) return title;
+      }
+    }
+
+    const currentBvid = location.pathname.match(/\/video\/(BV[\w]+)/i)?.[1];
+    const currentPage = new URL(location.href).searchParams.get("p") || "1";
+    if (!currentBvid) return "";
+
+    for (const container of containers) {
+      for (const link of container.querySelectorAll('a[href*="/video/"]')) {
+        try {
+          const url = new URL(link.href, location.href);
+          const bvid = url.pathname.match(/\/video\/(BV[\w]+)/i)?.[1];
+          const page = url.searchParams.get("p") || "1";
+          if (
+            bvid?.toLowerCase() !== currentBvid.toLowerCase() ||
+            page !== currentPage
+          ) {
+            continue;
+          }
+
+          const item = link.closest(
+            "li, .video-pod__item, .simple-base-item, " +
+              ".video-episode-card, [class*='item']"
+          );
+          const title = titleFromListItem(item) || titleFromListItem(link);
+          if (title) return title;
+        } catch {
+          // Ignore malformed links injected by the page.
+        }
+      }
+    }
+
+    return "";
+  }
+
   function render() {
     const state = getState();
     setNativeListsHidden(Boolean(state));
@@ -284,12 +468,14 @@
     }
 
     renderPanel(state);
+    attachPlayerListener();
     schedulePosition();
   }
 
   function start() {
     render();
     pageObserver = new MutationObserver(() => {
+      if (getState()) attachPlayerListener();
       schedulePosition();
     });
     pageObserver.observe(document.documentElement, { childList: true, subtree: true });
@@ -299,6 +485,10 @@
   window.addEventListener("scroll", schedulePosition, { passive: true });
   window.addEventListener("hashchange", render);
   window.addEventListener("popstate", render);
+  chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+    if (request?.type !== "get-current-video-title") return;
+    sendResponse({ title: getNativeListItemTitle() });
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start, { once: true });

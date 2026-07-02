@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "B站歌单模式",
-  "version": "1.4.3",
+  "version": "1.7.1",
   "description": "从歌单打开视频时，在页面右侧显示播放列表。",
+  "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://www.bilibili.com/*"],
   "action": {
     "default_title": "B站歌单模式",

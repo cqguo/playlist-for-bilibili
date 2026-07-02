@@ -67,6 +67,24 @@ body {
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
+.action-card--button {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-card--button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.action-card--button:disabled:hover {
+  border-color: #e3e5e7;
+  box-shadow: none;
+  transform: none;
+}
+
 .action-card:hover {
   border-color: #8bdcf7;
   box-shadow: 0 8px 22px rgb(0 0 0 / 7%);
@@ -93,6 +111,11 @@ body {
   background: #fff0f4;
 }
 
+.action-card__icon--add {
+  color: #fff;
+  background: linear-gradient(135deg, #00aeec, #6bd6fa);
+}
+
 .action-card__content {
   display: flex;
   flex: 1;
@@ -115,4 +138,24 @@ body {
   color: #c9ccd0;
   font-size: 25px;
   line-height: 1;
+}
+
+.popup__message {
+  display: none;
+  margin: 12px 2px 0;
+  padding: 9px 11px;
+  color: #157a9c;
+  font-size: 12px;
+  line-height: 17px;
+  background: #e5f7fd;
+  border-radius: 8px;
+}
+
+.popup__message.is-visible {
+  display: block;
+}
+
+.popup__message.is-error {
+  color: #d53b65;
+  background: #fff0f4;
 }

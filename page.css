@@ -135,6 +135,47 @@ body {
   font-size: 13px;
 }
 
+.playlist-card--collapsible:not(.is-expanded) .playlist-card__top {
+  border-bottom-color: transparent;
+}
+
+.playlist-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  color: #00aeec;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  background: #e5f7fd;
+  border: 0;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+
+.secondary-button:hover {
+  background: #d4f2fc;
+}
+
+.secondary-button__chevron {
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.secondary-button[aria-expanded="true"] .secondary-button__chevron {
+  transform: rotate(180deg);
+}
+
 .primary-button {
   padding: 10px 16px;
   color: #fff;
@@ -179,6 +220,13 @@ body {
   background: #f6f7f8;
 }
 
+.video-row__link:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible {
+  outline: 2px solid #00aeec;
+  outline-offset: 2px;
+}
+
 .video-row__order {
   display: grid;
   flex: 0 0 34px;
@@ -213,7 +261,16 @@ body {
   }
 
   .primary-button {
-    width: 100%;
     text-align: center;
+  }
+
+  .playlist-card__actions {
+    width: 100%;
+  }
+
+  .playlist-card__actions .primary-button,
+  .playlist-card__actions .secondary-button {
+    flex: 1;
+    justify-content: center;
   }
 }

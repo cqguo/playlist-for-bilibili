@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>B站歌单模式</title>
     <link rel="stylesheet" href="popup.css" />
+    <script src="playlist-data.js" defer></script>
+    <script src="popup.js" defer></script>
   </head>
   <body>
     <main class="popup">
@@ -17,6 +19,15 @@
       </header>
 
       <nav class="popup__actions" aria-label="插件功能">
+        <button id="add-current-video" class="action-card action-card--button" type="button">
+          <span class="action-card__icon action-card__icon--add">＋</span>
+          <span class="action-card__content">
+            <strong>将本视频添加到播放列表</strong>
+            <small id="add-current-video-description">正在读取当前视频…</small>
+          </span>
+          <span class="action-card__arrow">›</span>
+        </button>
+
         <a class="action-card" href="manage.html" target="_blank">
           <span class="action-card__icon action-card__icon--manage">≡</span>
           <span class="action-card__content">
@@ -35,6 +46,7 @@
           <span class="action-card__arrow">›</span>
         </a>
       </nav>
+      <p id="popup-message" class="popup__message" role="status" aria-live="polite"></p>
     </main>
   </body>
 </html>
