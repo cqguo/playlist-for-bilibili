@@ -10,6 +10,8 @@
   let pageObserver = null;
   let resizeObserver = null;
   let boundVideo = null;
+  let lastResetVideo = null;
+  let lastResetKey = "";
   let savedPlayMode = "loop";
   let currentPlaylistId = "default-music";
   const PLAY_MODES = new Set(["sequence", "loop", "single", "shuffle"]);
@@ -164,6 +166,23 @@
     if (!anchor) return null;
 
     return { right, anchor };
+  }
+
+  function isWebWideScreen() {
+    const player = document.querySelector(".bpx-player-container");
+    return (
+      player?.getAttribute("data-screen") === "web" ||
+      document.body?.classList.contains("webscreen-fix")
+    );
+  }
+
+  function removeWideScreenStickyClass() {
+    if (!isWebWideScreen()) return;
+    for (const container of document.querySelectorAll(
+      ".right-container-inner.scroll-sticky"
+    )) {
+      container.classList.remove("scroll-sticky");
+    }
   }
 
   function createHost() {
@@ -376,9 +395,47 @@
     return (state.index + 1) % state.items.length;
   }
 
+  function resetCurrentVideoToStart(video) {
+    const state = getState();
+    if (!state) return;
+
+    const item = state.items[state.index];
+    const key = `${item.bvid.toLowerCase()}:${item.page || 1}`;
+    if (video === lastResetVideo && key === lastResetKey) return;
+
+    lastResetVideo = video;
+    lastResetKey = key;
+
+    const reset = () => {
+      if (
+        video !== lastResetVideo ||
+        key !== lastResetKey ||
+        !video.isConnected
+      ) {
+        return;
+      }
+      try {
+        if (video.currentTime > 0.05) video.currentTime = 0;
+      } catch {
+        // The media metadata is not available yet.
+      }
+    };
+
+    video.addEventListener("loadedmetadata", reset, {
+      once: true,
+      capture: true
+    });
+    video.addEventListener("play", reset, { once: true, capture: true });
+    video.addEventListener("playing", reset, { once: true, capture: true });
+    reset();
+  }
+
   function attachPlayerListener() {
     const video = document.querySelector("video");
-    if (!video || video === boundVideo) return;
+    if (!video) return;
+
+    resetCurrentVideoToStart(video);
+    if (video === boundVideo) return;
 
     boundVideo = video;
     video.addEventListener(
@@ -533,12 +590,19 @@
 
   async function start() {
     await loadSavedPlayMode();
+    removeWideScreenStickyClass();
     render();
     pageObserver = new MutationObserver(() => {
+      removeWideScreenStickyClass();
       if (getState()) attachPlayerListener();
       schedulePosition();
     });
-    pageObserver.observe(document.documentElement, { childList: true, subtree: true });
+    pageObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "data-screen"]
+    });
   }
 
   async function handleLocationChange() {

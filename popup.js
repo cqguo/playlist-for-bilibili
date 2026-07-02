@@ -58,7 +58,7 @@ function renderPlaylistOptions() {
     name.textContent = playlist.name;
 
     const count = document.createElement("small");
-    count.textContent = `${playlist.items.length} 首歌曲`;
+    count.textContent = `${playlist.items.length} 个视频`;
 
     content.append(name, count);
     option.append(icon, content);
@@ -77,7 +77,7 @@ function closePlaylistPicker() {
 function updateAddButtonState() {
   if (!playlists.length) {
     addButton.disabled = true;
-    description.textContent = "请先在歌单管理中创建歌单";
+    description.textContent = "请先在播放列表管理中创建播放列表";
     return;
   }
   if (!currentVideo) {
@@ -95,7 +95,7 @@ async function initialize() {
     playlists = await PlaylistStore.getPlaylists();
   } catch {
     playlists = [];
-    showMessage("歌单读取失败，请重新加载插件后再试。", true);
+    showMessage("播放列表读取失败，请重新加载插件后再试。", true);
   }
   renderPlaylistOptions();
 
@@ -148,16 +148,16 @@ async function addToPlaylist(selectedPlaylist) {
     if (result.status === "exists") {
       showMessage(`这个视频已经在“${selectedPlaylist.name}”中了。`);
     } else if (result.status === "updated") {
-      showMessage(`视频已在“${selectedPlaylist.name}”中，歌名已更新。`);
+      showMessage(`视频已在“${selectedPlaylist.name}”中，标题已更新。`);
     } else if (result.status === "full") {
       showMessage(`“${selectedPlaylist.name}”已达到 100 个视频的上限。`, true);
     } else if (result.status === "no_playlist") {
-      showMessage("所选歌单已不存在，请重新打开插件。", true);
+      showMessage("所选播放列表已不存在，请重新打开插件。", true);
     } else {
       selectedPlaylist.items = result.playlist.items;
       renderPlaylistOptions();
       showMessage(
-        `已添加到“${selectedPlaylist.name}”，共 ${result.playlist.items.length} 首歌曲。`
+        `已添加到“${selectedPlaylist.name}”，共 ${result.playlist.items.length} 个视频。`
       );
     }
     closePlaylistPicker();

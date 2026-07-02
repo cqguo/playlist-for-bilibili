@@ -103,8 +103,8 @@ const DEFAULT_SONG_TITLES = [
 
 globalThis.DEFAULT_PLAYLIST = {
   id: "default-music",
-  name: "默认音乐歌单",
-  description: "100 首华语歌曲组成的默认测试歌单。",
+  name: "默认播放列表",
+  description: "由 100 个华语音乐视频组成的默认播放列表。",
   items: DEFAULT_SONG_TITLES.map((title, index) => ({
     bvid: "BV1h14y1d78n",
     page: index + 1,
@@ -161,7 +161,7 @@ globalThis.DEFAULT_PLAYLIST = {
 
     return {
       id: String(value.id || fallback?.id || createPlaylistId()).slice(0, 100),
-      name: String(value.name || fallback?.name || "未命名歌单").slice(0, 80),
+      name: String(value.name || fallback?.name || "未命名播放列表").slice(0, 80),
       description: String(value.description || fallback?.description || "").slice(0, 200),
       items: normalizedItems
     };
@@ -216,7 +216,7 @@ globalThis.DEFAULT_PLAYLIST = {
 
   async function savePlaylist(playlist) {
     const normalized = normalizePlaylist(playlist);
-    if (!normalized) throw new Error("无效的歌单");
+    if (!normalized) throw new Error("无效的播放列表");
 
     const playlists = await getPlaylists();
     const index = playlists.findIndex((item) => item.id === normalized.id);
@@ -228,7 +228,7 @@ globalThis.DEFAULT_PLAYLIST = {
 
   async function addPlaylist(name) {
     const normalizedName = String(name || "").trim().slice(0, 80);
-    if (!normalizedName) throw new Error("歌单名称不能为空");
+    if (!normalizedName) throw new Error("播放列表名称不能为空");
 
     const playlists = await getPlaylists();
     const playlist = {

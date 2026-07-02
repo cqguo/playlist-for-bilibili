@@ -37,7 +37,7 @@ function createPlaylistCard(playlist, cardIndex, playMode) {
   name.textContent = playlist.name;
 
   const count = document.createElement("p");
-  count.textContent = `${playlist.items.length} 首歌曲`;
+  count.textContent = `${playlist.items.length} 个视频`;
   heading.append(name, count);
 
   const actions = document.createElement("div");
@@ -60,12 +60,12 @@ function createPlaylistCard(playlist, cardIndex, playMode) {
     enter.href = buildVideoUrl(playlist, 0, playMode);
     enter.target = "_blank";
     enter.rel = "noreferrer";
-    enter.textContent = "打开歌单";
+    enter.textContent = "打开播放列表";
     actions.append(enter);
   } else {
     const emptyButton = document.createElement("span");
     emptyButton.className = "primary-button is-disabled";
-    emptyButton.textContent = "歌单为空";
+    emptyButton.textContent = "播放列表为空";
     actions.append(emptyButton);
   }
 
@@ -108,7 +108,7 @@ function createPlaylistCard(playlist, cardIndex, playMode) {
   if (!playlist.items.length) {
     const empty = document.createElement("li");
     empty.className = "playlist-card__empty";
-    empty.textContent = "这个歌单还没有歌曲。";
+    empty.textContent = "这个播放列表还没有视频。";
     preview.append(empty);
   }
 
@@ -138,8 +138,8 @@ async function renderPlaylists() {
     empty.className = "panel";
     empty.innerHTML =
       '<span class="panel__icon">♪</span>' +
-      "<h2>还没有歌单</h2>" +
-      "<p>请先前往歌单管理页面新建歌单。</p>";
+      "<h2>还没有播放列表</h2>" +
+      "<p>请先前往播放列表管理页面新建播放列表。</p>";
     container.append(empty);
     return;
   }

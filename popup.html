@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>B站歌单模式</title>
+    <title>自定义播放列表</title>
     <link rel="stylesheet" href="popup.css" />
     <script src="playlist-data.js" defer></script>
     <script src="popup.js" defer></script>
@@ -13,7 +13,7 @@
       <header class="popup__header">
         <span class="popup__logo">▶</span>
         <div>
-          <h1>B站歌单模式</h1>
+          <h1>自定义播放列表</h1>
           <p>请选择要进入的功能</p>
         </div>
       </header>
@@ -37,10 +37,10 @@
         <aside id="playlist-picker" class="popup__playlist-picker" hidden>
           <div class="popup__picker-header">
             <div>
-              <strong>选择歌单</strong>
+              <strong>选择播放列表</strong>
               <small>点击后立即添加</small>
             </div>
-            <button id="close-playlist-picker" class="popup__picker-close" type="button" aria-label="关闭歌单列表">
+            <button id="close-playlist-picker" class="popup__picker-close" type="button" aria-label="关闭播放列表选择">
               ×
             </button>
           </div>
@@ -50,8 +50,8 @@
         <a class="action-card" href="manage.html" target="_blank">
           <span class="action-card__icon action-card__icon--manage">≡</span>
           <span class="action-card__content">
-            <strong>歌单管理</strong>
-            <small>新建、编辑和整理歌单</small>
+            <strong>播放列表管理</strong>
+            <small>新建、编辑和整理播放列表</small>
           </span>
           <span class="action-card__arrow">›</span>
         </a>
@@ -59,8 +59,8 @@
         <a class="action-card" href="select.html" target="_blank">
           <span class="action-card__icon action-card__icon--select">♪</span>
           <span class="action-card__content">
-            <strong>歌单选择</strong>
-            <small>选择一个歌单开始播放</small>
+            <strong>选择播放列表</strong>
+            <small>选择一个播放列表开始播放</small>
           </span>
           <span class="action-card__arrow">›</span>
         </a>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>歌单管理 - B站歌单模式</title>
+    <title>播放列表管理 - 自定义播放列表</title>
     <link rel="stylesheet" href="page.css" />
     <script src="playlist-data.js" defer></script>
     <script src="manage.js" defer></script>
@@ -11,26 +11,26 @@
   <body>
     <header class="page-header">
       <div class="page-header__inner">
-        <div class="brand"><span class="brand__icon">▶</span>B站歌单模式</div>
+        <div class="brand"><span class="brand__icon">▶</span>自定义播放列表</div>
       </div>
     </header>
     <main class="page-main">
       <div class="page-title-row">
         <div>
-          <h1 class="page-title">歌单管理</h1>
-          <p class="page-description">新建歌单、编辑歌名或整理歌单内容。</p>
+          <h1 class="page-title">播放列表管理</h1>
+          <p class="page-description">新建播放列表、编辑视频标题或整理列表内容。</p>
         </div>
         <form id="create-playlist-form" class="create-playlist-form">
-          <label class="visually-hidden" for="new-playlist-name">新歌单名称</label>
+          <label class="visually-hidden" for="new-playlist-name">新播放列表名称</label>
           <input
             id="new-playlist-name"
             class="create-playlist-form__input"
             type="text"
             maxlength="80"
-            placeholder="输入新歌单名称"
+            placeholder="输入新播放列表名称"
             required
           />
-          <button class="primary-button primary-button--form" type="submit">新建歌单</button>
+          <button class="primary-button primary-button--form" type="submit">新建播放列表</button>
         </form>
       </div>
       <p id="manage-message" class="page-message" role="status" aria-live="polite"></p>
