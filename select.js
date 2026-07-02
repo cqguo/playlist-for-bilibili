@@ -5,12 +5,13 @@ function encodePlaylist(items) {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
-function buildVideoUrl(playlist, index) {
+function buildVideoUrl(playlist, index, playMode) {
   const item = playlist.items[index];
   const params = new URLSearchParams({
     bili_playlist: "1",
+    playlist_id: playlist.id,
     playlist_name: playlist.name,
-    play_mode: "loop",
+    play_mode: playMode,
     index: String(index),
     list: encodePlaylist(playlist.items)
   });
@@ -18,30 +19,62 @@ function buildVideoUrl(playlist, index) {
   return `https://www.bilibili.com/video/${item.bvid}/${query}#${params.toString()}`;
 }
 
-function initializeCollapse() {
-  const card = document.querySelector("#default-playlist-card");
-  const toggle = document.querySelector("#toggle-playlist");
-  const label = toggle.querySelector(".secondary-button__label");
-  const preview = document.querySelector("#playlist-preview");
+function createPlaylistCard(playlist, cardIndex, playMode) {
+  const card = document.createElement("section");
+  card.className = "playlist-card playlist-card--collapsible";
 
-  toggle.addEventListener("click", () => {
-    const expanded = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!expanded));
-    label.textContent = expanded ? "展开列表" : "收起列表";
-    preview.hidden = expanded;
-    card.classList.toggle("is-expanded", !expanded);
-  });
-}
+  const top = document.createElement("div");
+  top.className = "playlist-card__top";
 
-async function renderPlaylist() {
-  const playlist = await PlaylistStore.getPlaylist();
-  const count = document.querySelector("#playlist-count");
-  const preview = document.querySelector("#playlist-preview");
-  const enter = document.querySelector("#enter-playlist");
+  const icon = document.createElement("span");
+  icon.className = "panel__icon";
+  icon.textContent = "♪";
 
-  count.textContent = `${playlist.items.length} 个视频`;
-  enter.href = buildVideoUrl(playlist, 0);
-  enter.textContent = "打开默认歌单";
+  const heading = document.createElement("div");
+  heading.className = "playlist-card__heading";
+
+  const name = document.createElement("h2");
+  name.textContent = playlist.name;
+
+  const count = document.createElement("p");
+  count.textContent = `${playlist.items.length} 首歌曲`;
+  heading.append(name, count);
+
+  const actions = document.createElement("div");
+  actions.className = "playlist-card__actions";
+
+  const listId = `playlist-preview-${cardIndex}`;
+  const toggle = document.createElement("button");
+  toggle.className = "secondary-button";
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", listId);
+  toggle.innerHTML =
+    '<span class="secondary-button__label">展开列表</span>' +
+    '<span class="secondary-button__chevron" aria-hidden="true">⌄</span>';
+
+  actions.append(toggle);
+  if (playlist.items.length) {
+    const enter = document.createElement("a");
+    enter.className = "primary-button";
+    enter.href = buildVideoUrl(playlist, 0, playMode);
+    enter.target = "_blank";
+    enter.rel = "noreferrer";
+    enter.textContent = "打开歌单";
+    actions.append(enter);
+  } else {
+    const emptyButton = document.createElement("span");
+    emptyButton.className = "primary-button is-disabled";
+    emptyButton.textContent = "歌单为空";
+    actions.append(emptyButton);
+  }
+
+  top.append(icon, heading, actions);
+
+  const preview = document.createElement("ol");
+  preview.id = listId;
+  preview.className = "video-list";
+  preview.hidden = true;
 
   for (const [index, item] of playlist.items.entries()) {
     const row = document.createElement("li");
@@ -49,7 +82,7 @@ async function renderPlaylist() {
 
     const link = document.createElement("a");
     link.className = "video-row__link";
-    link.href = buildVideoUrl(playlist, index);
+    link.href = buildVideoUrl(playlist, index, playMode);
     link.target = "_blank";
     link.rel = "noreferrer";
 
@@ -71,7 +104,49 @@ async function renderPlaylist() {
     row.append(link);
     preview.append(row);
   }
+
+  if (!playlist.items.length) {
+    const empty = document.createElement("li");
+    empty.className = "playlist-card__empty";
+    empty.textContent = "这个歌单还没有歌曲。";
+    preview.append(empty);
+  }
+
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    toggle.querySelector(".secondary-button__label").textContent =
+      expanded ? "展开列表" : "收起列表";
+    preview.hidden = expanded;
+    card.classList.toggle("is-expanded", !expanded);
+  });
+
+  card.append(top, preview);
+  return card;
 }
 
-initializeCollapse();
-renderPlaylist();
+async function renderPlaylists() {
+  const playlists = await PlaylistStore.getPlaylists();
+  const playModes = await Promise.all(
+    playlists.map((playlist) => PlaylistStore.getPlayMode(playlist.id))
+  );
+  const container = document.querySelector("#select-playlists");
+  container.replaceChildren();
+
+  if (!playlists.length) {
+    const empty = document.createElement("section");
+    empty.className = "panel";
+    empty.innerHTML =
+      '<span class="panel__icon">♪</span>' +
+      "<h2>还没有歌单</h2>" +
+      "<p>请先前往歌单管理页面新建歌单。</p>";
+    container.append(empty);
+    return;
+  }
+
+  playlists.forEach((playlist, index) => {
+    container.append(createPlaylistCard(playlist, index, playModes[index]));
+  });
+}
+
+renderPlaylists();

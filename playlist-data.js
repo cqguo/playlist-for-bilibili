@@ -113,8 +113,12 @@ globalThis.DEFAULT_PLAYLIST = {
 };
 
 (() => {
-  const STORAGE_KEY = "defaultPlaylist";
+  const PLAYLISTS_KEY = "playlists";
+  const LEGACY_STORAGE_KEY = "defaultPlaylist";
+  const PLAY_MODES_KEY = "playlistPlayModes";
+  const LEGACY_PLAY_MODE_KEY = "playlistPlayMode";
   const MAX_ITEMS = 100;
+  const PLAY_MODES = new Set(["sequence", "loop", "single", "shuffle"]);
 
   function cloneDefaultPlaylist() {
     return {
@@ -123,9 +127,17 @@ globalThis.DEFAULT_PLAYLIST = {
     };
   }
 
-  function normalizePlaylist(value) {
-    const fallback = cloneDefaultPlaylist();
-    if (!value || !Array.isArray(value.items)) return fallback;
+  function createPlaylistId() {
+    return `playlist-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function normalizePlaylist(value, fallback = null) {
+    if (!value || !Array.isArray(value.items)) {
+      return fallback ? {
+        ...fallback,
+        items: fallback.items.map((item) => ({ ...item }))
+      } : null;
+    }
 
     const storedItems = value.items
       .filter((item) => item && /^BV[\w]+$/i.test(item.bvid))
@@ -137,40 +149,114 @@ globalThis.DEFAULT_PLAYLIST = {
             : undefined,
         title: String(item.title || item.bvid).slice(0, 120)
       }));
-    const mergedItems = [];
+    const normalizedItems = [];
     const seen = new Set();
-    for (const item of [...storedItems, ...fallback.items]) {
+    for (const item of storedItems) {
       const key = `${item.bvid.toLowerCase()}:${item.page || 1}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      mergedItems.push(item);
-      if (mergedItems.length >= MAX_ITEMS) break;
+      normalizedItems.push(item);
+      if (normalizedItems.length >= MAX_ITEMS) break;
     }
 
     return {
-      id: "default-music",
-      name: String(value.name || fallback.name).slice(0, 80),
-      description: String(value.description || fallback.description).slice(0, 200),
-      items: mergedItems
+      id: String(value.id || fallback?.id || createPlaylistId()).slice(0, 100),
+      name: String(value.name || fallback?.name || "未命名歌单").slice(0, 80),
+      description: String(value.description || fallback?.description || "").slice(0, 200),
+      items: normalizedItems
     };
   }
 
-  async function getPlaylist() {
-    if (!globalThis.chrome?.storage?.local) return cloneDefaultPlaylist();
-    const stored = await chrome.storage.local.get(STORAGE_KEY);
-    return normalizePlaylist(stored[STORAGE_KEY]);
+  function normalizePlaylists(values) {
+    if (!Array.isArray(values)) return [];
+
+    const playlists = [];
+    const seenIds = new Set();
+    for (const value of values) {
+      const playlist = normalizePlaylist(value);
+      if (!playlist) continue;
+      if (seenIds.has(playlist.id)) playlist.id = createPlaylistId();
+      seenIds.add(playlist.id);
+      playlists.push(playlist);
+    }
+    return playlists;
   }
 
-  async function savePlaylist(playlist) {
-    const normalized = normalizePlaylist(playlist);
+  let memoryPlaylists = [cloneDefaultPlaylist()];
+
+  async function getPlaylists() {
+    if (!globalThis.chrome?.storage?.local) {
+      return normalizePlaylists(memoryPlaylists);
+    }
+
+    const stored = await chrome.storage.local.get([PLAYLISTS_KEY, LEGACY_STORAGE_KEY]);
+    if (Array.isArray(stored[PLAYLISTS_KEY])) {
+      return normalizePlaylists(stored[PLAYLISTS_KEY]);
+    }
+    if (stored[LEGACY_STORAGE_KEY]) {
+      return [normalizePlaylist(stored[LEGACY_STORAGE_KEY], cloneDefaultPlaylist())];
+    }
+    return [cloneDefaultPlaylist()];
+  }
+
+  async function savePlaylists(playlists) {
+    const normalized = normalizePlaylists(playlists);
     if (globalThis.chrome?.storage?.local) {
-      await chrome.storage.local.set({ [STORAGE_KEY]: normalized });
+      await chrome.storage.local.set({ [PLAYLISTS_KEY]: normalized });
+    } else {
+      memoryPlaylists = normalized;
     }
     return normalized;
   }
 
-  async function addVideo(video) {
-    const playlist = await getPlaylist();
+  async function getPlaylist(playlistId) {
+    const playlists = await getPlaylists();
+    return playlists.find((playlist) => playlist.id === playlistId) || playlists[0] || null;
+  }
+
+  async function savePlaylist(playlist) {
+    const normalized = normalizePlaylist(playlist);
+    if (!normalized) throw new Error("无效的歌单");
+
+    const playlists = await getPlaylists();
+    const index = playlists.findIndex((item) => item.id === normalized.id);
+    if (index === -1) playlists.push(normalized);
+    else playlists[index] = normalized;
+    await savePlaylists(playlists);
+    return normalized;
+  }
+
+  async function addPlaylist(name) {
+    const normalizedName = String(name || "").trim().slice(0, 80);
+    if (!normalizedName) throw new Error("歌单名称不能为空");
+
+    const playlists = await getPlaylists();
+    const playlist = {
+      id: createPlaylistId(),
+      name: normalizedName,
+      description: "",
+      items: []
+    };
+    playlists.push(playlist);
+    await savePlaylists(playlists);
+    return { playlist, playlists };
+  }
+
+  async function deletePlaylist(playlistId) {
+    const playlists = await getPlaylists();
+    const nextPlaylists = playlists.filter((playlist) => playlist.id !== playlistId);
+    if (nextPlaylists.length === playlists.length) {
+      return { deleted: false, playlists };
+    }
+    await savePlaylists(nextPlaylists);
+    return { deleted: true, playlists: nextPlaylists };
+  }
+
+  async function addVideo(video, playlistId) {
+    const playlist = await getPlaylist(playlistId);
+    if (!playlist || (playlistId && playlist.id !== playlistId)) {
+      return { status: "no_playlist", playlist: null };
+    }
     const existingItem = playlist.items.find(
       (item) =>
         item.bvid.toLowerCase() === video.bvid.toLowerCase() &&
@@ -196,5 +282,39 @@ globalThis.DEFAULT_PLAYLIST = {
     return { status: "added", playlist };
   }
 
-  globalThis.PlaylistStore = { getPlaylist, savePlaylist, addVideo };
+  async function getPlayMode(playlistId = "default-music") {
+    if (!globalThis.chrome?.storage?.local) return "loop";
+    const stored = await chrome.storage.local.get([
+      PLAY_MODES_KEY,
+      LEGACY_PLAY_MODE_KEY
+    ]);
+    const modes = stored[PLAY_MODES_KEY] || {};
+    if (PLAY_MODES.has(modes[playlistId])) return modes[playlistId];
+    return PLAY_MODES.has(stored[LEGACY_PLAY_MODE_KEY])
+      ? stored[LEGACY_PLAY_MODE_KEY]
+      : "loop";
+  }
+
+  async function savePlayMode(mode, playlistId = "default-music") {
+    const normalized = PLAY_MODES.has(mode) ? mode : "loop";
+    if (globalThis.chrome?.storage?.local) {
+      const stored = await chrome.storage.local.get(PLAY_MODES_KEY);
+      const modes = { ...(stored[PLAY_MODES_KEY] || {}) };
+      modes[playlistId] = normalized;
+      await chrome.storage.local.set({ [PLAY_MODES_KEY]: modes });
+    }
+    return normalized;
+  }
+
+  globalThis.PlaylistStore = {
+    getPlaylists,
+    savePlaylists,
+    getPlaylist,
+    savePlaylist,
+    addPlaylist,
+    deletePlaylist,
+    addVideo,
+    getPlayMode,
+    savePlayMode
+  };
 })();

@@ -1,7 +1,12 @@
 const addButton = document.querySelector("#add-current-video");
 const description = document.querySelector("#add-current-video-description");
 const message = document.querySelector("#popup-message");
+const playlistPicker = document.querySelector("#playlist-picker");
+const playlistPickerList = document.querySelector("#playlist-picker-list");
+const closePlaylistPickerButton = document.querySelector("#close-playlist-picker");
 let currentVideo = null;
+let playlists = [];
+let pickerButtons = [];
 
 function showMessage(text, isError = false) {
   message.textContent = text;
@@ -33,7 +38,67 @@ function getVideoFromTab(tab) {
   }
 }
 
+function renderPlaylistOptions() {
+  playlistPickerList.replaceChildren();
+  pickerButtons = [];
+
+  for (const playlist of playlists) {
+    const option = document.createElement("button");
+    option.className = "popup__playlist-option";
+    option.type = "button";
+
+    const icon = document.createElement("span");
+    icon.className = "popup__playlist-option-icon";
+    icon.textContent = "♪";
+
+    const content = document.createElement("span");
+    content.className = "popup__playlist-option-content";
+
+    const name = document.createElement("strong");
+    name.textContent = playlist.name;
+
+    const count = document.createElement("small");
+    count.textContent = `${playlist.items.length} 首歌曲`;
+
+    content.append(name, count);
+    option.append(icon, content);
+    option.addEventListener("click", () => addToPlaylist(playlist));
+    playlistPickerList.append(option);
+    pickerButtons.push(option);
+  }
+}
+
+function closePlaylistPicker() {
+  playlistPicker.hidden = true;
+  document.body.classList.remove("is-picker-open");
+  addButton.setAttribute("aria-expanded", "false");
+}
+
+function updateAddButtonState() {
+  if (!playlists.length) {
+    addButton.disabled = true;
+    description.textContent = "请先在歌单管理中创建歌单";
+    return;
+  }
+  if (!currentVideo) {
+    addButton.disabled = true;
+    description.textContent = "请先打开一个 B 站视频页面";
+    return;
+  }
+
+  addButton.disabled = false;
+  description.textContent = currentVideo.title;
+}
+
 async function initialize() {
+  try {
+    playlists = await PlaylistStore.getPlaylists();
+  } catch {
+    playlists = [];
+    showMessage("歌单读取失败，请重新加载插件后再试。", true);
+  }
+  renderPlaylistOptions();
+
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     currentVideo = getVideoFromTab(tab);
@@ -52,39 +117,59 @@ async function initialize() {
     currentVideo = null;
   }
 
-  if (!currentVideo) {
-    addButton.disabled = true;
-    description.textContent = "请先打开一个 B 站视频页面";
-    return;
-  }
-
-  addButton.disabled = false;
-  description.textContent = currentVideo.title;
+  updateAddButtonState();
 }
 
-addButton.addEventListener("click", async () => {
+addButton.addEventListener("click", () => {
+  if (!currentVideo || !playlists.length) return;
+
+  playlistPicker.hidden = false;
+  document.body.classList.add("is-picker-open");
+  addButton.setAttribute("aria-expanded", "true");
+  pickerButtons[0]?.focus();
+});
+
+closePlaylistPickerButton.addEventListener("click", () => {
+  closePlaylistPicker();
+  addButton.focus();
+});
+
+async function addToPlaylist(selectedPlaylist) {
   if (!currentVideo) return;
 
-  addButton.disabled = true;
+  pickerButtons.forEach((button) => {
+    button.disabled = true;
+  });
+  closePlaylistPickerButton.disabled = true;
   description.textContent = "正在添加…";
 
   try {
-    const result = await PlaylistStore.addVideo(currentVideo);
+    const result = await PlaylistStore.addVideo(currentVideo, selectedPlaylist.id);
     if (result.status === "exists") {
-      showMessage("这个视频已经在默认歌单中了。");
+      showMessage(`这个视频已经在“${selectedPlaylist.name}”中了。`);
     } else if (result.status === "updated") {
-      showMessage("视频已在歌单中，名称已更新为当前列表项名称。");
+      showMessage(`视频已在“${selectedPlaylist.name}”中，歌名已更新。`);
     } else if (result.status === "full") {
-      showMessage("默认歌单已达到 100 个视频的上限。", true);
+      showMessage(`“${selectedPlaylist.name}”已达到 100 个视频的上限。`, true);
+    } else if (result.status === "no_playlist") {
+      showMessage("所选歌单已不存在，请重新打开插件。", true);
     } else {
-      showMessage(`已添加到默认歌单，共 ${result.playlist.items.length} 个视频。`);
+      selectedPlaylist.items = result.playlist.items;
+      renderPlaylistOptions();
+      showMessage(
+        `已添加到“${selectedPlaylist.name}”，共 ${result.playlist.items.length} 首歌曲。`
+      );
     }
+    closePlaylistPicker();
   } catch {
     showMessage("添加失败，请重新加载插件后再试。", true);
   } finally {
-    addButton.disabled = false;
-    description.textContent = currentVideo.title;
+    pickerButtons.forEach((button) => {
+      button.disabled = false;
+    });
+    closePlaylistPickerButton.disabled = false;
+    updateAddButtonState();
   }
-});
+}
 
 initialize();

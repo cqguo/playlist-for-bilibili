@@ -17,35 +17,7 @@
     <main class="page-main">
       <h1 class="page-title">歌单选择</h1>
       <p class="page-description">点击歌单或视频，直接打开对应的 B 站网页。</p>
-      <section id="default-playlist-card" class="playlist-card playlist-card--collapsible">
-        <div class="playlist-card__top">
-          <span class="panel__icon">♪</span>
-          <div class="playlist-card__heading">
-            <h2>默认音乐歌单</h2>
-            <p id="playlist-count">正在读取歌单…</p>
-          </div>
-          <div class="playlist-card__actions">
-            <button
-              id="toggle-playlist"
-              class="secondary-button"
-              type="button"
-              aria-expanded="false"
-              aria-controls="playlist-preview"
-            >
-              <span class="secondary-button__label">展开列表</span>
-              <span class="secondary-button__chevron" aria-hidden="true">⌄</span>
-            </button>
-            <a
-              id="enter-playlist"
-              class="primary-button"
-              href="#"
-              target="_blank"
-              rel="noreferrer"
-            >打开默认歌单</a>
-          </div>
-        </div>
-        <ol id="playlist-preview" class="video-list" hidden></ol>
-      </section>
+      <div id="select-playlists" class="playlist-grid" aria-live="polite"></div>
     </main>
   </body>
 </html>

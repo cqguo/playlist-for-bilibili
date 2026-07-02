@@ -12,9 +12,15 @@ body {
   margin: 0;
   color: #18191c;
   background: #f7f8fa;
+  transition: width 160ms ease;
+}
+
+body.is-picker-open {
+  width: 620px;
 }
 
 .popup {
+  width: 340px;
   padding: 18px;
 }
 
@@ -52,6 +58,127 @@ body {
 .popup__actions {
   display: grid;
   gap: 10px;
+}
+
+.popup__playlist-picker {
+  position: fixed;
+  top: 0;
+  left: 340px;
+  width: 280px;
+  height: 100vh;
+  min-height: 100%;
+  padding: 18px;
+  overflow-y: auto;
+  background: #fff;
+  border-left: 1px solid #e3e5e7;
+  box-shadow: -10px 0 28px rgb(0 0 0 / 7%);
+}
+
+.popup__playlist-picker[hidden] {
+  display: none;
+}
+
+.popup__picker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.popup__picker-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.popup__picker-header strong {
+  font-size: 15px;
+}
+
+.popup__picker-header small {
+  color: #9499a0;
+  font-size: 11px;
+}
+
+.popup__picker-close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #9499a0;
+  font: inherit;
+  font-size: 19px;
+  cursor: pointer;
+  place-items: center;
+  background: #f1f2f3;
+  border: 0;
+  border-radius: 7px;
+}
+
+.popup__picker-close:hover {
+  color: #fb7299;
+  background: #fff0f4;
+}
+
+.popup__picker-list {
+  display: grid;
+  gap: 8px;
+}
+
+.popup__playlist-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  color: #18191c;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: #f7f8fa;
+  border: 1px solid #e3e5e7;
+  border-radius: 10px;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.popup__playlist-option:hover {
+  background: #e5f7fd;
+  border-color: #8bdcf7;
+}
+
+.popup__playlist-option-icon {
+  display: grid;
+  flex: 0 0 32px;
+  height: 32px;
+  color: #00aeec;
+  font-size: 16px;
+  place-items: center;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.popup__playlist-option-content {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.popup__playlist-option-content strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup__playlist-option-content small {
+  color: #9499a0;
+  font-size: 11px;
+}
+
+.popup__playlist-option:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .action-card {

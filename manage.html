@@ -15,18 +15,26 @@
       </div>
     </header>
     <main class="page-main">
-      <h1 class="page-title">歌单管理</h1>
-      <p class="page-description">查看默认歌单及从视频页面添加的内容。</p>
-      <section class="playlist-card">
-        <div class="playlist-card__top">
-          <span class="panel__icon">≡</span>
-          <div class="playlist-card__heading">
-            <h2 id="manage-playlist-name">默认音乐歌单</h2>
-            <p id="manage-playlist-meta">正在读取歌单…</p>
-          </div>
+      <div class="page-title-row">
+        <div>
+          <h1 class="page-title">歌单管理</h1>
+          <p class="page-description">新建歌单、编辑歌名或整理歌单内容。</p>
         </div>
-        <ol id="manage-video-list" class="video-list"></ol>
-      </section>
+        <form id="create-playlist-form" class="create-playlist-form">
+          <label class="visually-hidden" for="new-playlist-name">新歌单名称</label>
+          <input
+            id="new-playlist-name"
+            class="create-playlist-form__input"
+            type="text"
+            maxlength="80"
+            placeholder="输入新歌单名称"
+            required
+          />
+          <button class="primary-button primary-button--form" type="submit">新建歌单</button>
+        </form>
+      </div>
+      <p id="manage-message" class="page-message" role="status" aria-live="polite"></p>
+      <div id="manage-playlists" class="playlist-grid" aria-live="polite"></div>
     </main>
   </body>
 </html>

@@ -1,6 +1,8 @@
 (() => {
   const HOST_ID = "bili-playlist-shadow-host";
   const NATIVE_LIST_STYLE_ID = "bili-playlist-hide-native-lists";
+  const PLAY_MODES_STORAGE_KEY = "playlistPlayModes";
+  const LEGACY_PLAY_MODE_STORAGE_KEY = "playlistPlayMode";
   const MAX_ITEMS = 100;
   let host = null;
   let shadow = null;
@@ -8,6 +10,8 @@
   let pageObserver = null;
   let resizeObserver = null;
   let boundVideo = null;
+  let savedPlayMode = "loop";
+  let currentPlaylistId = "default-music";
   const PLAY_MODES = new Set(["sequence", "loop", "single", "shuffle"]);
 
   function decodePlaylist(value) {
@@ -53,22 +57,74 @@
     );
 
     return {
+      id:
+        params.get("playlist_id") ||
+        params.get("playlist_name") ||
+        "default-music",
       name: params.get("playlist_name") || "我的播放列表",
       items,
       index: matchedIndex >= 0 ? matchedIndex : 0,
-      mode: PLAY_MODES.has(params.get("play_mode"))
-        ? params.get("play_mode")
-        : "loop",
+      mode: savedPlayMode,
       params
     };
   }
 
   function buildUrl(state, index) {
     const params = new URLSearchParams(state.params);
+    params.set("playlist_id", state.id);
     params.set("index", String(index));
+    params.set("play_mode", state.mode);
     const item = state.items[index];
     const query = item.page ? `?p=${item.page}` : "";
     return `https://www.bilibili.com/video/${item.bvid}/${query}#${params.toString()}`;
+  }
+
+  async function loadSavedPlayMode() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const fragmentMode = params.get("play_mode");
+    currentPlaylistId =
+      params.get("playlist_id") ||
+      params.get("playlist_name") ||
+      "default-music";
+    try {
+      const stored = await chrome.storage.local.get([
+        PLAY_MODES_STORAGE_KEY,
+        LEGACY_PLAY_MODE_STORAGE_KEY
+      ]);
+      const modes = stored[PLAY_MODES_STORAGE_KEY] || {};
+      if (PLAY_MODES.has(modes[currentPlaylistId])) {
+        savedPlayMode = modes[currentPlaylistId];
+        return;
+      }
+      if (PLAY_MODES.has(stored[LEGACY_PLAY_MODE_STORAGE_KEY])) {
+        savedPlayMode = stored[LEGACY_PLAY_MODE_STORAGE_KEY];
+      } else {
+        savedPlayMode = PLAY_MODES.has(fragmentMode) ? fragmentMode : "loop";
+      }
+    } catch {
+      savedPlayMode = PLAY_MODES.has(fragmentMode) ? fragmentMode : "loop";
+    }
+
+    try {
+      const stored = await chrome.storage.local.get(PLAY_MODES_STORAGE_KEY);
+      const modes = { ...(stored[PLAY_MODES_STORAGE_KEY] || {}) };
+      modes[currentPlaylistId] = savedPlayMode;
+      await chrome.storage.local.set({ [PLAY_MODES_STORAGE_KEY]: modes });
+    } catch {
+      // Storage may be unavailable on an invalidated extension context.
+    }
+  }
+
+  async function savePlayMode(mode) {
+    savedPlayMode = PLAY_MODES.has(mode) ? mode : "loop";
+    try {
+      const stored = await chrome.storage.local.get(PLAY_MODES_STORAGE_KEY);
+      const modes = { ...(stored[PLAY_MODES_STORAGE_KEY] || {}) };
+      modes[currentPlaylistId] = savedPlayMode;
+      await chrome.storage.local.set({ [PLAY_MODES_STORAGE_KEY]: modes });
+    } catch {
+      // Keep the in-memory mode active for the current page.
+    }
   }
 
   function setNativeListsHidden(hidden) {
@@ -86,7 +142,8 @@
       #app .right-container .playlist-container,
       #app .right-container .video-sections-content-list,
       #app .right-container .recommend-list-v1,
-      #app .right-container .rec-list {
+      #app .right-container .rec-list,
+      #app .right-container .bui-collapse-header {
         display: none !important;
       }
     `;
@@ -260,14 +317,16 @@
       option.selected = value === state.mode;
       modeSelect.append(option);
     }
-    modeSelect.addEventListener("change", () => {
+    modeSelect.addEventListener("change", async () => {
+      await savePlayMode(modeSelect.value);
       const params = new URLSearchParams(location.hash.slice(1));
-      params.set("play_mode", modeSelect.value);
+      params.set("play_mode", savedPlayMode);
       history.replaceState(
         null,
         "",
         `${location.pathname}${location.search}#${params.toString()}`
       );
+      render();
     });
 
     header.append(heading, modeSelect);
@@ -472,7 +531,8 @@
     schedulePosition();
   }
 
-  function start() {
+  async function start() {
+    await loadSavedPlayMode();
     render();
     pageObserver = new MutationObserver(() => {
       if (getState()) attachPlayerListener();
@@ -481,10 +541,23 @@
     pageObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
+  async function handleLocationChange() {
+    await loadSavedPlayMode();
+    render();
+  }
+
   window.addEventListener("resize", schedulePosition, { passive: true });
   window.addEventListener("scroll", schedulePosition, { passive: true });
-  window.addEventListener("hashchange", render);
-  window.addEventListener("popstate", render);
+  window.addEventListener("hashchange", handleLocationChange);
+  window.addEventListener("popstate", handleLocationChange);
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    const change = changes[PLAY_MODES_STORAGE_KEY];
+    const nextMode = change?.newValue?.[currentPlaylistId];
+    if (areaName !== "local" || !PLAY_MODES.has(nextMode)) return;
+    if (savedPlayMode === nextMode) return;
+    savedPlayMode = nextMode;
+    render();
+  });
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (request?.type !== "get-current-video-title") return;
     sendResponse({ title: getNativeListItemTitle() });
