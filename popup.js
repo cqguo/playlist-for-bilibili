@@ -150,7 +150,7 @@ async function addToPlaylist(selectedPlaylist) {
     } else if (result.status === "updated") {
       showMessage(`视频已在“${selectedPlaylist.name}”中，标题已更新。`);
     } else if (result.status === "full") {
-      showMessage(`“${selectedPlaylist.name}”已达到 100 个视频的上限。`, true);
+      showMessage(`“${selectedPlaylist.name}”已达到 500 个视频的上限。`, true);
     } else if (result.status === "no_playlist") {
       showMessage("所选播放列表已不存在，请重新打开插件。", true);
     } else {

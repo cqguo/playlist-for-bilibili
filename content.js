@@ -3,12 +3,12 @@
   const NATIVE_LIST_STYLE_ID = "bili-playlist-hide-native-lists";
   const PLAY_MODES_STORAGE_KEY = "playlistPlayModes";
   const LEGACY_PLAY_MODE_STORAGE_KEY = "playlistPlayMode";
-  const MAX_ITEMS = 100;
+  const MAX_ITEMS = 500;
   let host = null;
   let shadow = null;
-  let positionFrame = 0;
+  let nativeHeader = null;
+  let originalHeaderChildren = [];
   let pageObserver = null;
-  let resizeObserver = null;
   let boundVideo = null;
   let lastResetVideo = null;
   let lastResetKey = "";
@@ -141,64 +141,52 @@
     style.id = NATIVE_LIST_STYLE_ID;
     style.textContent = `
       #app .right-container .video-pod,
-      #app .right-container .playlist-container,
       #app .right-container .video-sections-content-list,
-      #app .right-container .recommend-list-v1,
-      #app .right-container .rec-list,
-      #app .right-container .bui-collapse-header {
+      #app .right-container .video-card-ad-small,
+      #app .right-container .next-play,
+      #app .right-container .bui-collapse-header + .bui-collapse-body,
+      #app .right-container .bui-collapse-header ~ .bui-collapse-body {
         display: none !important;
+      }
+      #app .right-container .bui-collapse-header {
+        display: block !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
       }
     `;
     document.head.append(style);
   }
 
-  function findLayout() {
-    const right =
-      document.querySelector("#app .right-container") ||
-      document.querySelector(".video-container-v1 .right-container") ||
-      document.querySelector(".right-container");
-    if (!right) return null;
-
-    const anchor =
-      right.querySelector("#danmukuBox") ||
-      right.querySelector(".danmaku-box") ||
-      right.querySelector(".up-panel-container");
-    if (!anchor) return null;
-
-    return { right, anchor };
-  }
-
-  function isWebWideScreen() {
-    const player = document.querySelector(".bpx-player-container");
+  function findNativeHeader() {
     return (
-      player?.getAttribute("data-screen") === "web" ||
-      document.body?.classList.contains("webscreen-fix")
+      document.querySelector("#app .right-container .bui-collapse-header") ||
+      document.querySelector(
+        ".video-container-v1 .right-container .bui-collapse-header"
+      ) ||
+      document.querySelector(".right-container .bui-collapse-header")
     );
   }
 
-  function removeWideScreenStickyClass() {
-    if (!isWebWideScreen()) return;
-    for (const container of document.querySelectorAll(
-      ".right-container-inner.scroll-sticky"
-    )) {
-      container.classList.remove("scroll-sticky");
-    }
-  }
-
   function createHost() {
+    nativeHeader = findNativeHeader();
+    if (!nativeHeader) return false;
+
+    originalHeaderChildren = [...nativeHeader.childNodes];
     host = document.createElement("div");
     host.id = HOST_ID;
-    host.style.position = "fixed";
-    host.style.zIndex = "20";
-    host.style.margin = "0";
+    host.style.display = "block";
+    host.style.width = "100%";
     host.style.padding = "0";
-    host.style.pointerEvents = "auto";
-    document.body.append(host);
+    nativeHeader.replaceChildren(host);
 
     shadow = host.attachShadow({ mode: "open" });
+    shadow.addEventListener("click", (event) => event.stopPropagation());
     const style = document.createElement("style");
     style.textContent = `
       :host, *, *::before, *::after { box-sizing: border-box; }
+      :host { display: block; width: 100%; }
       .panel {
         width: 100%;
         overflow: hidden;
@@ -303,10 +291,15 @@
       a:hover strong, a.active strong { color: #00aeec; }
     `;
     shadow.append(style);
+    return true;
   }
 
   function renderPanel(state) {
-    if (!host) createHost();
+    if (!host?.isConnected) {
+      host = null;
+      shadow = null;
+      if (!createHost()) return false;
+    }
     shadow.querySelector(".panel")?.remove();
 
     const panel = document.createElement("section");
@@ -377,6 +370,7 @@
 
     panel.append(header, list);
     shadow.append(panel);
+    return true;
   }
 
   function getNextIndex(state) {
@@ -452,36 +446,14 @@
     );
   }
 
-  function positionHost() {
-    positionFrame = 0;
-    if (!host) return;
-
-    const layout = findLayout();
-    if (!layout) {
-      host.style.display = "none";
-      return;
+  function restoreNativeHeader() {
+    if (nativeHeader?.isConnected && nativeHeader.contains(host)) {
+      nativeHeader.replaceChildren(...originalHeaderChildren);
     }
-
-    const rightRect = layout.right.getBoundingClientRect();
-    const anchorRect = layout.anchor.getBoundingClientRect();
-    const top = layout.anchor.classList.contains("up-panel-container")
-      ? anchorRect.bottom + 12
-      : anchorRect.top;
-
-    host.style.display = "block";
-    host.style.left = `${Math.round(rightRect.left)}px`;
-    host.style.top = `${Math.round(top)}px`;
-    host.style.width = `${Math.round(rightRect.width)}px`;
-
-    resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(schedulePosition);
-    resizeObserver.observe(layout.right);
-    resizeObserver.observe(layout.anchor);
-  }
-
-  function schedulePosition() {
-    if (positionFrame) return;
-    positionFrame = requestAnimationFrame(positionHost);
+    host = null;
+    shadow = null;
+    nativeHeader = null;
+    originalHeaderChildren = [];
   }
 
   function cleanNativeTitle(value) {
@@ -576,32 +548,25 @@
     const state = getState();
     setNativeListsHidden(Boolean(state));
     if (!state) {
-      resizeObserver?.disconnect();
-      host?.remove();
-      host = null;
-      shadow = null;
+      restoreNativeHeader();
       return;
     }
 
     renderPanel(state);
     attachPlayerListener();
-    schedulePosition();
   }
 
   async function start() {
     await loadSavedPlayMode();
-    removeWideScreenStickyClass();
     render();
     pageObserver = new MutationObserver(() => {
-      removeWideScreenStickyClass();
-      if (getState()) attachPlayerListener();
-      schedulePosition();
+      if (!getState()) return;
+      attachPlayerListener();
+      if (!host?.isConnected) render();
     });
     pageObserver.observe(document.documentElement, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "data-screen"]
+      subtree: true
     });
   }
 
@@ -610,8 +575,6 @@
     render();
   }
 
-  window.addEventListener("resize", schedulePosition, { passive: true });
-  window.addEventListener("scroll", schedulePosition, { passive: true });
   window.addEventListener("hashchange", handleLocationChange);
   window.addEventListener("popstate", handleLocationChange);
   chrome.storage.onChanged.addListener((changes, areaName) => {
