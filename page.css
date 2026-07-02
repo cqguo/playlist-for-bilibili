@@ -1,0 +1,219 @@
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: #18191c;
+  background: #f5f6f8;
+}
+
+.page-header {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e3e5e7;
+}
+
+.page-header__inner,
+.page-main {
+  width: min(960px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.page-header__inner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.brand__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  font-size: 13px;
+  place-items: center;
+  background: linear-gradient(135deg, #00aeec, #fb7299);
+  border-radius: 9px;
+}
+
+.page-main {
+  padding: 42px 0;
+}
+
+.page-title {
+  margin: 0 0 7px;
+  font-size: 28px;
+}
+
+.page-description {
+  margin: 0 0 28px;
+  color: #61666d;
+  font-size: 14px;
+}
+
+.panel {
+  padding: 48px 24px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e3e5e7;
+  border-radius: 14px;
+}
+
+.panel__icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  color: #00aeec;
+  font-size: 28px;
+  place-items: center;
+  background: #e5f7fd;
+  border-radius: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.panel p {
+  margin: 0;
+  color: #9499a0;
+  font-size: 13px;
+}
+
+.playlist-card {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e3e5e7;
+  border-radius: 14px;
+}
+
+.playlist-card__top {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 22px;
+  border-bottom: 1px solid #e3e5e7;
+}
+
+.playlist-card__top .panel__icon {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+}
+
+.playlist-card__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-card__heading h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+}
+
+.playlist-card__heading p {
+  margin: 0;
+  color: #9499a0;
+  font-size: 13px;
+}
+
+.primary-button {
+  padding: 10px 16px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: #00aeec;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+
+.primary-button:hover {
+  background: #009bd4;
+}
+
+.video-list {
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+}
+
+.video-row {
+  min-height: 58px;
+}
+
+.video-row__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 12px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.video-row + .video-row {
+  border-top: 1px solid #f1f2f3;
+}
+
+.video-row__link:hover {
+  background: #f6f7f8;
+}
+
+.video-row__order {
+  display: grid;
+  flex: 0 0 34px;
+  height: 34px;
+  color: #00aeec;
+  font-size: 11px;
+  place-items: center;
+  background: #e5f7fd;
+  border-radius: 8px;
+}
+
+.video-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.video-row__info strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.video-row__info small {
+  color: #9499a0;
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .playlist-card__top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .primary-button {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "B站歌单模式",
+  "version": "1.4.3",
+  "description": "从歌单打开视频时，在页面右侧显示播放列表。",
+  "host_permissions": ["https://www.bilibili.com/*"],
+  "action": {
+    "default_title": "B站歌单模式",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.bilibili.com/video/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

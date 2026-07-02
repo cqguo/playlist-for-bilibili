@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>歌单管理 - B站歌单模式</title>
+    <link rel="stylesheet" href="page.css" />
+    <script src="playlist-data.js" defer></script>
+    <script src="manage.js" defer></script>
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="page-header__inner">
+        <div class="brand"><span class="brand__icon">▶</span>B站歌单模式</div>
+      </div>
+    </header>
+    <main class="page-main">
+      <h1 class="page-title">歌单管理</h1>
+      <p class="page-description">当前已创建一个用于测试的内置歌单。</p>
+      <section class="playlist-card">
+        <div class="playlist-card__top">
+          <span class="panel__icon">≡</span>
+          <div class="playlist-card__heading">
+            <h2 id="manage-playlist-name">默认音乐歌单</h2>
+            <p id="manage-playlist-meta">正在读取歌单…</p>
+          </div>
+        </div>
+        <ol id="manage-video-list" class="video-list"></ol>
+      </section>
+    </main>
+  </body>
+</html>
