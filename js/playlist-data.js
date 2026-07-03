@@ -10,7 +10,7 @@ globalThis.DEFAULT_PLAYLIST = {
   const LEGACY_STORAGE_KEY = "defaultPlaylist";
   const PLAY_MODES_KEY = "playlistPlayModes";
   const LEGACY_PLAY_MODE_KEY = "playlistPlayMode";
-  const MAX_ITEMS = 500;
+  const MAX_ITEMS = 2000;
   const PLAY_MODES = new Set(["sequence", "loop", "single", "shuffle"]);
 
   function cloneDefaultPlaylist() {
@@ -175,6 +175,75 @@ globalThis.DEFAULT_PLAYLIST = {
     return { status: "added", playlist };
   }
 
+  async function addVideos(videos, playlistId) {
+    const playlist = await getPlaylist(playlistId);
+    if (!playlist || (playlistId && playlist.id !== playlistId)) {
+      return {
+        status: "no_playlist",
+        playlist: null,
+        added: 0,
+        updated: 0,
+        existing: 0,
+        full: 0
+      };
+    }
+
+    const normalizedVideos = [];
+    const seen = new Set();
+    for (const video of Array.isArray(videos) ? videos : []) {
+      if (!video || !/^BV[\w]+$/i.test(video.bvid)) continue;
+      const page =
+        Number.isInteger(Number(video.page)) && Number(video.page) > 0
+          ? Number(video.page)
+          : undefined;
+      const key = `${video.bvid.toLowerCase()}:${page || 1}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      normalizedVideos.push({
+        bvid: video.bvid,
+        page,
+        title: String(video.title || video.bvid).slice(0, 120)
+      });
+    }
+
+    let added = 0;
+    let updated = 0;
+    let existing = 0;
+    let full = 0;
+    for (const video of normalizedVideos) {
+      const existingItem = playlist.items.find(
+        (item) =>
+          item.bvid.toLowerCase() === video.bvid.toLowerCase() &&
+          (item.page || 1) === (video.page || 1)
+      );
+      if (existingItem) {
+        if (existingItem.title !== video.title) {
+          existingItem.title = video.title;
+          updated += 1;
+        } else {
+          existing += 1;
+        }
+        continue;
+      }
+      if (playlist.items.length >= MAX_ITEMS) {
+        full += 1;
+        continue;
+      }
+      playlist.items.push(video);
+      added += 1;
+    }
+
+    if (added || updated) await savePlaylist(playlist);
+    return {
+      status: full && !added && !updated ? "full" : "completed",
+      playlist,
+      added,
+      updated,
+      existing,
+      full
+    };
+  }
+
   async function getPlayMode(playlistId = "default-music") {
     if (!globalThis.chrome?.storage?.local) return "loop";
     const stored = await chrome.storage.local.get([
@@ -207,6 +276,7 @@ globalThis.DEFAULT_PLAYLIST = {
     addPlaylist,
     deletePlaylist,
     addVideo,
+    addVideos,
     getPlayMode,
     savePlayMode
   };

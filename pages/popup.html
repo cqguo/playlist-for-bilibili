@@ -34,6 +34,22 @@
           <span class="action-card__arrow">›</span>
         </button>
 
+        <button
+          id="add-video-batch"
+          class="action-card action-card--button"
+          type="button"
+          hidden
+          aria-expanded="false"
+          aria-controls="batch-picker"
+        >
+          <span class="action-card__icon action-card__icon--batch">✓</span>
+          <span class="action-card__content">
+            <strong>批量添加分 P / 合集</strong>
+            <small id="add-video-batch-description">选择多个条目加入播放列表</small>
+          </span>
+          <span class="action-card__arrow">›</span>
+        </button>
+
         <aside id="playlist-picker" class="popup__playlist-picker" hidden>
           <div class="popup__picker-header">
             <div>
@@ -45,6 +61,26 @@
             </button>
           </div>
           <div id="playlist-picker-list" class="popup__picker-list"></div>
+        </aside>
+
+        <aside id="batch-picker" class="popup__playlist-picker popup__batch-picker" hidden>
+          <div class="popup__picker-header">
+            <div>
+              <strong>批量选择条目</strong>
+              <small id="batch-picker-summary">请选择要添加的分 P 或合集视频</small>
+            </div>
+            <button id="close-batch-picker" class="popup__picker-close" type="button" aria-label="关闭批量选择">
+              ×
+            </button>
+          </div>
+          <label class="popup__batch-select-all">
+            <input id="batch-select-all" type="checkbox" />
+            <span>全选</span>
+          </label>
+          <div id="batch-picker-list" class="popup__batch-list"></div>
+          <button id="batch-next" class="popup__batch-next" type="button" disabled>
+            选择播放列表
+          </button>
         </aside>
 
         <a class="action-card" href="manage.html" target="_blank">

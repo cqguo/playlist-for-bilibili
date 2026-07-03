@@ -3,7 +3,7 @@
   const NATIVE_LIST_STYLE_ID = "bili-playlist-hide-native-lists";
   const PLAY_MODES_STORAGE_KEY = "playlistPlayModes";
   const LEGACY_PLAY_MODE_STORAGE_KEY = "playlistPlayMode";
-  const MAX_ITEMS = 500;
+  const MAX_ITEMS = 2000;
   let host = null;
   let shadow = null;
   let nativeHeader = null;
@@ -544,6 +544,123 @@
     return "";
   }
 
+  function normalizeBatchItems(items) {
+    const normalized = [];
+    const seen = new Set();
+    for (const item of items) {
+      if (!item || !/^BV[\w]+$/i.test(item.bvid)) continue;
+      const page =
+        Number.isInteger(Number(item.page)) && Number(item.page) > 0
+          ? Number(item.page)
+          : undefined;
+      const key = `${item.bvid.toLowerCase()}:${page || 1}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      normalized.push({
+        bvid: item.bvid,
+        page,
+        title: cleanNativeTitle(item.title) || item.bvid
+      });
+      if (normalized.length >= MAX_ITEMS) break;
+    }
+    return normalized;
+  }
+
+  function getBatchItemsFromDocument() {
+    const items = [];
+    const containers = document.querySelectorAll(
+      ".video-pod, .playlist-container, .video-sections-content-list, " +
+        ".base-video-sections-v1, #multi_page"
+    );
+    for (const container of containers) {
+      for (const link of container.querySelectorAll('a[href*="/video/"]')) {
+        try {
+          const url = new URL(link.href, location.href);
+          const bvid = url.pathname.match(/\/video\/(BV[\w]+)/i)?.[1];
+          if (!bvid) continue;
+          const item = link.closest(
+            "li, .video-pod__item, .simple-base-item, " +
+              ".video-episode-card, [class*='item']"
+          );
+          items.push({
+            bvid,
+            page: Number(url.searchParams.get("p") || 1),
+            title: titleFromListItem(item) || titleFromListItem(link)
+          });
+        } catch {
+          // Ignore malformed links injected by the page.
+        }
+      }
+    }
+    return normalizeBatchItems(items);
+  }
+
+  function getEpisodeItems(episode) {
+    const bvid = episode?.bvid || episode?.arc?.bvid;
+    if (!bvid) return [];
+    const episodeTitle = cleanNativeTitle(
+      episode.title || episode.arc?.title || episode.long_title
+    );
+    const pages = Array.isArray(episode.pages) ? episode.pages : [];
+    if (!pages.length) {
+      return [{ bvid, title: episodeTitle || bvid }];
+    }
+    return pages.map((page, index) => {
+      const partTitle = cleanNativeTitle(page.part);
+      return {
+        bvid,
+        page: Number(page.page) || index + 1,
+        title:
+          pages.length > 1 && episodeTitle && partTitle !== episodeTitle
+            ? `${episodeTitle} · ${partTitle}`
+            : episodeTitle || partTitle || bvid
+      };
+    });
+  }
+
+  async function getBatchItems() {
+    const currentBvid = location.pathname.match(/\/video\/(BV[\w]+)/i)?.[1];
+    if (!currentBvid) return [];
+
+    try {
+      const response = await fetch(
+        `https://api.bilibili.com/x/web-interface/view?bvid=${encodeURIComponent(currentBvid)}`,
+        { credentials: "same-origin" }
+      );
+      if (response.ok) {
+        const payload = await response.json();
+        const data = payload?.data;
+        const sections = Array.isArray(data?.ugc_season?.sections)
+          ? data.ugc_season.sections
+          : [];
+        const currentSection = sections.find((section) =>
+          section.episodes?.some(
+            (episode) =>
+              (episode.bvid || episode.arc?.bvid)?.toLowerCase() ===
+              currentBvid.toLowerCase()
+          )
+        );
+        const collectionItems = currentSection?.episodes?.flatMap(getEpisodeItems);
+        if (collectionItems?.length > 1) {
+          return normalizeBatchItems(collectionItems);
+        }
+
+        const pageItems = (Array.isArray(data?.pages) ? data.pages : []).map(
+          (page, index) => ({
+            bvid: data.bvid || currentBvid,
+            page: Number(page.page) || index + 1,
+            title: page.part
+          })
+        );
+        if (pageItems.length > 1) return normalizeBatchItems(pageItems);
+      }
+    } catch {
+      // Fall back to the list already rendered by Bilibili.
+    }
+
+    return getBatchItemsFromDocument();
+  }
+
   function render() {
     const state = getState();
     setNativeListsHidden(Boolean(state));
@@ -586,8 +703,20 @@
     render();
   });
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-    if (request?.type !== "get-current-video-title") return;
-    sendResponse({ title: getNativeListItemTitle() });
+    if (request?.type === "get-current-video-title") {
+      sendResponse({ title: getNativeListItemTitle() });
+      return;
+    }
+    if (request?.type === "get-current-video-context") {
+      getBatchItems()
+        .then((items) => {
+          sendResponse({ title: getNativeListItemTitle(), items });
+        })
+        .catch(() => {
+          sendResponse({ title: getNativeListItemTitle(), items: [] });
+        });
+      return true;
+    }
   });
 
   if (document.readyState === "loading") {
