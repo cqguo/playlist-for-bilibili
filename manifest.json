@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "自定义播放列表",
+  "name": "Playlist for Bilibili / 自定义B站播放列表 (Chrome Extension)",
   "version": "1.9.2",
   "description": "创建和管理自定义播放列表，并在播放视频时显示列表内容。",
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://www.bilibili.com/*"],
   "action": {
-    "default_title": "自定义播放列表",
+    "default_title": "Playlist for Bilibili / 自定义B站播放列表 (Chrome Extension)",
     "default_popup": "popup.html"
   },
   "content_scripts": [
