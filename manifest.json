@@ -7,12 +7,12 @@
   "host_permissions": ["https://www.bilibili.com/*"],
   "action": {
     "default_title": "Playlist for Bilibili / 自定义B站播放列表 (Chrome Extension)",
-    "default_popup": "popup.html"
+    "default_popup": "pages/popup.html"
   },
   "content_scripts": [
     {
       "matches": ["https://www.bilibili.com/video/*"],
-      "js": ["content.js"],
+      "js": ["js/content.js"],
       "run_at": "document_idle"
     }
   ]
