@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="170" height="28" viewBox="0 0 170 28" role="img" aria-labelledby="title desc">
+  <title id="title">Manifest V3</title>
+  <desc id="desc">Badge for Manifest V3.</desc>
+  <rect width="170" height="28" rx="4" fill="#fb7299"/>
+  <text x="85" y="18" fill="#ffffff" font-family="Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">Manifest V3</text>
+</svg>

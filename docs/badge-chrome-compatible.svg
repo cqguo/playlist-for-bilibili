@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="28" viewBox="0 0 210 28" role="img" aria-labelledby="title desc">
+  <title id="title">Chrome compatible</title>
+  <desc id="desc">Badge for Chrome compatibility.</desc>
+  <rect width="210" height="28" rx="4" fill="#00aeec"/>
+  <text x="105" y="18" fill="#ffffff" font-family="Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">Chrome compatible</text>
+</svg>
